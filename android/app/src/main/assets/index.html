@@ -1891,6 +1891,17 @@ html, body {
   });
 
   function downloadBlob(blob, filename) {
+    // Android App 内没有下载管理器，改为通过原生桥接把文件写入手机「下载」目录
+    if (window.AndroidBridge && typeof window.AndroidBridge.saveFile === 'function') {
+      const reader = new FileReader();
+      reader.onloadend = function() {
+        const dataUrl = String(reader.result || '');
+        const b64 = dataUrl.substring(dataUrl.indexOf(',') + 1);
+        window.AndroidBridge.saveFile(filename, blob.type || 'application/octet-stream', b64);
+      };
+      reader.readAsDataURL(blob);
+      return;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1900,7 +1911,6 @@ html, body {
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-
   document.getElementById('btnImportJson').addEventListener('click', () => {
     document.getElementById('importFileInput').click();
   });
