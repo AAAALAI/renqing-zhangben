@@ -18,6 +18,8 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // 个人自用：直接用 debug 签名，保证打出来的 release 包能直接安装
+            signingConfig signingConfigs.debug
         }
         debug {
             minifyEnabled false
@@ -32,4 +34,6 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
+    // 用 https 虚拟域名加载本地 assets，保证 IndexedDB / localStorage 可用
+    implementation 'androidx.webkit:webkit:1.10.0'
 }
