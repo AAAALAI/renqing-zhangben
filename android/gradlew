@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Minimal gradlew - GitHub Actions 用 gradle wrapper jar 直接构建即可
+echo "Use gradle wrapper jar from gradle-wrapper.jar"

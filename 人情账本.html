@@ -1,0 +1,2006 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>人情账本 · 随礼与借款记录</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#C8402B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+/* ===== 设计变量 ===== */
+:root {
+  --bg: #FAF7F2;
+  --bg-soft: #F3EEE6;
+  --card: #FFFFFF;
+  --ink: #2C2420;
+  --ink-soft: #6B5E54;
+  --ink-faint: #A89B8E;
+  --line: #E8E0D5;
+  --red: #C8402B;
+  --red-soft: #F5E6E2;
+  --red-deep: #A33220;
+  --green: #3D7A4A;
+  --green-soft: #E4EFE6;
+  --blue: #2B5C8A;
+  --blue-soft: #E2ECF4;
+  --amber: #B8860B;
+  --amber-soft: #F7EFD8;
+  --shadow: 0 2px 12px rgba(44,36,32,0.08);
+  --shadow-lg: 0 8px 32px rgba(44,36,32,0.14);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --tab-h: 60px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+#app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+}
+
+/* ===== 顶部栏 ===== */
+.topbar {
+  flex-shrink: 0;
+  padding: calc(16px + var(--safe-top)) 20px 12px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.topbar h1 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.topbar .sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+  margin-top: 2px;
+}
+.topbar-add {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(200,64,43,0.3);
+  transition: transform 0.1s;
+}
+.topbar-add:active { transform: scale(0.9); }
+
+/* ===== 主内容区 ===== */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: calc(var(--tab-h) + 16px + var(--safe-bottom));
+}
+.view { display: none; padding: 16px; }
+.view.active { display: block; }
+
+/* ===== 底部Tab ===== */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 480px;
+  height: calc(var(--tab-h) + var(--safe-bottom));
+  padding-bottom: var(--safe-bottom);
+  background: var(--card);
+  border-top: 1px solid var(--line);
+  display: flex;
+  z-index: 100;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 11px;
+  transition: color 0.2s;
+}
+.tab-item.active { color: var(--red); }
+.tab-item svg { width: 22px; height: 22px; }
+
+/* ===== 悬浮新增按钮 ===== */
+.fab {
+  position: fixed;
+  right: 20px;
+  bottom: calc(var(--tab-h) + 16px + var(--safe-bottom));
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(200,64,43,0.4);
+  cursor: pointer;
+  z-index: 90;
+  transition: transform 0.15s;
+}
+.fab:active { transform: scale(0.92); }
+.fab svg { width: 26px; height: 26px; }
+
+/* ===== 卡片通用 ===== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-title {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ===== 统计看板 ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.stat-box {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+.stat-box .label {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+.stat-box .value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stat-box .value.red { color: var(--red); }
+.stat-box .value.green { color: var(--green); }
+.stat-box .value.blue { color: var(--blue); }
+.stat-box .value.amber { color: var(--amber); }
+.stat-box.full { grid-column: 1 / -1; }
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--line);
+  font-size: 14px;
+}
+.stat-row:last-child { border-bottom: none; }
+.stat-row .k { color: var(--ink-soft); }
+.stat-row .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* ===== 记录卡片列表 ===== */
+.record-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  position: relative;
+  overflow: hidden;
+}
+.record-card:active { transform: scale(0.98); }
+.record-card .rc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+.record-card .rc-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.record-card .rc-amount {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.record-card .rc-amount.out { color: var(--red); }
+.record-card .rc-amount.in { color: var(--green); }
+.record-card .rc-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-faint);
+}
+.tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.tag.give { background: var(--red-soft); color: var(--red-deep); }
+.tag.receive { background: var(--green-soft); color: var(--green); }
+.tag.lend { background: var(--blue-soft); color: var(--blue); }
+.tag.borrow { background: var(--amber-soft); color: var(--amber); }
+.tag.settled { background: var(--bg-soft); color: var(--ink-faint); }
+
+.record-card .rc-remark {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.record-card .rc-debt {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-size: 12px;
+  color: var(--ink-soft);
+  display: flex;
+  justify-content: space-between;
+}
+.record-card .rc-debt .remain { font-weight: 600; }
+.record-card .rc-debt .remain.warn { color: var(--red); }
+
+/* ===== 搜索筛选 ===== */
+.search-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.search-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 14px;
+  outline: none;
+  color: var(--ink);
+}
+.search-input:focus { border-color: var(--red); }
+
+.filter-chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.filter-chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.chip.active {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
+
+/* ===== 底部抽屉 ===== */
+.drawer-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(44,36,32,0.45);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.drawer-mask.show { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  bottom: 0;
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg);
+  border-radius: 20px 20px 0 0;
+  z-index: 201;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+}
+.drawer.show { transform: translateX(-50%) translateY(0); }
+.drawer-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  margin: 10px auto 0;
+  flex-shrink: 0;
+}
+.drawer-header {
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.drawer-header h2 { font-size: 17px; font-weight: 600; }
+.drawer-close {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.drawer-footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+/* ===== 表单 ===== */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  font-size: 15px;
+  outline: none;
+  color: var(--ink);
+  font-family: inherit;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--red); }
+.form-textarea { resize: vertical; min-height: 60px; }
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.type-selector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.type-option {
+  padding: 12px 8px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--card);
+}
+.type-option .t-name { font-size: 14px; font-weight: 600; }
+.type-option .t-desc { font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+.type-option.active { border-color: var(--red); background: var(--red-soft); }
+.type-option.active .t-name { color: var(--red-deep); }
+
+/* ===== 按钮 ===== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.1s;
+  font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--red); color: #fff; width: 100%; }
+.btn-primary:disabled { opacity: 0.5; }
+.btn-ghost { background: var(--bg-soft); color: var(--ink); }
+.btn-danger { background: var(--red-soft); color: var(--red-deep); }
+.btn-block { width: 100%; }
+.btn-sm { padding: 8px 14px; font-size: 13px; }
+
+.btn-group { display: flex; gap: 10px; }
+.btn-group .btn { flex: 1; }
+
+/* ===== 详情页 ===== */
+.detail-section { margin-bottom: 16px; }
+.detail-section h3 {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.detail-row:last-child { border-bottom: none; }
+.detail-row .k { color: var(--ink-soft); }
+.detail-row .v { font-weight: 500; text-align: right; max-width: 60%; }
+
+.repay-item {
+  background: var(--bg-soft);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.repay-item .ri-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.repay-item .ri-amount { font-weight: 600; color: var(--green); }
+
+/* ===== 人物页 ===== */
+.person-summary {
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-deep) 100%);
+  color: #fff;
+  border-radius: var(--radius);
+  padding: 18px;
+  margin-bottom: 14px;
+}
+.person-summary .ps-name {
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.person-summary .ps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.person-summary .ps-item .lbl {
+  font-size: 11px;
+  opacity: 0.8;
+  margin-bottom: 3px;
+}
+.person-summary .ps-item .val {
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.person-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.person-list-item .pli-name { font-size: 15px; font-weight: 600; }
+.person-list-item .pli-info { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+.person-list-item .pli-arrow { color: var(--ink-faint); }
+
+/* ===== 设置页 ===== */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+.setting-item .si-left { display: flex; align-items: center; gap: 12px; }
+.setting-item .si-icon {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-soft);
+}
+.setting-item .si-text .t { font-size: 14px; font-weight: 500; }
+.setting-item .si-text .d { font-size: 11px; color: var(--ink-faint); margin-top: 1px; }
+.setting-item .si-arrow { color: var(--ink-faint); }
+
+.setting-danger { border: 1px solid var(--red-soft); }
+.setting-danger .si-icon { background: var(--red-soft); }
+
+/* ===== 空状态 ===== */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--ink-faint);
+}
+.empty .e-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 16px;
+  opacity: 0.4;
+}
+.empty .e-title { font-size: 15px; margin-bottom: 6px; color: var(--ink-soft); }
+.empty .e-desc { font-size: 13px; }
+
+/* ===== Toast ===== */
+.toast {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(44,36,32,0.88);
+  color: #fff;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 14px;
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+  max-width: 80%;
+  text-align: center;
+}
+.toast.show { opacity: 1; }
+
+/* ===== 确认弹窗 ===== */
+.confirm-box {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.9);
+  background: var(--card);
+  border-radius: 16px;
+  padding: 24px;
+  width: 80%;
+  max-width: 320px;
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-lg);
+}
+.confirm-box.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.confirm-box h3 { font-size: 16px; margin-bottom: 8px; text-align: center; }
+.confirm-box p { font-size: 13px; color: var(--ink-soft); text-align: center; margin-bottom: 20px; line-height: 1.6; }
+
+/* ===== 金额输入 ===== */
+.amount-input-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  overflow: hidden;
+}
+.amount-input-wrap .prefix {
+  padding: 0 12px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--red);
+}
+.amount-input-wrap input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 11px 14px 11px 0;
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: transparent;
+  color: var(--ink);
+}
+
+/* ===== 隐藏文件input ===== */
+.hidden-file { display: none; }
+
+/* ===== 滚动条美化 ===== */
+.main::-webkit-scrollbar, .drawer-body::-webkit-scrollbar { width: 0; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- 顶部栏 -->
+  <div class="topbar">
+    <div>
+      <h1 id="topbarTitle">人情账本</h1>
+      <div class="sub" id="topbarSub">随礼往来 · 借款记录</div>
+    </div>
+    <button class="topbar-add" id="topbarAdd">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="main">
+    <!-- ===== 视图：首页统计 ===== -->
+    <section class="view active" id="view-home">
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="label">随礼送出</div>
+          <div class="value red" id="statGiveOut">¥0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">随礼收到</div>
+          <div class="value green" id="statGiveIn">¥0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">别人欠我</div>
+          <div class="value blue" id="statLendOut">¥0</div>
+        </div>
+        <div class="stat-box">
+          <div class="label">我欠别人</div>
+          <div class="value amber" id="statBorrowIn">¥0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          往来汇总
+        </div>
+        <div class="stat-row">
+          <span class="k">人情差额（收到-送出）</span>
+          <span class="v" id="statGiftBalance">¥0</span>
+        </div>
+        <div class="stat-row">
+          <span class="k">未结清借款笔数</span>
+          <span class="v" id="statUnsettledCount">0 笔</span>
+        </div>
+        <div class="stat-row">
+          <span class="k">记录总数</span>
+          <span class="v" id="statTotalCount">0 条</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          本月动态
+        </div>
+        <div id="homeMonthStats"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          事件分布
+        </div>
+        <div id="homeEventStats"></div>
+      </div>
+
+      <div class="card" id="homeOverdueCard" style="display:none;border:1.5px solid var(--red);background:linear-gradient(180deg,var(--red-soft) 0%,var(--card) 40%);">
+        <div class="card-title" style="color:var(--red-deep);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          逾期提醒
+        </div>
+        <div id="homeOverdueList"></div>
+      </div>
+
+      <div class="card" id="homeDebtCard" style="display:none;">
+        <div class="card-title" style="color:var(--red);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          待关注借款
+        </div>
+        <div id="homeDebtList"></div>
+      </div>
+    </section>
+
+    <!-- ===== 视图：全部记录 ===== -->
+    <section class="view" id="view-records">
+      <div class="search-bar">
+        <input class="search-input" id="recordSearch" type="text" placeholder="搜索姓名或备注..." />
+      </div>
+      <div class="filter-chips" id="recordFilters">
+        <div class="chip active" data-filter="all">全部</div>
+        <div class="chip" data-filter="giveGift">随礼送出</div>
+        <div class="chip" data-filter="receiveGift">随礼收到</div>
+        <div class="chip" data-filter="lend">我借出</div>
+        <div class="chip" data-filter="borrow">我借入</div>
+        <div class="chip" data-filter="unsettled">未结清</div>
+      </div>
+      <div id="recordList"></div>
+    </section>
+
+    <!-- ===== 视图：人物查询 ===== -->
+    <section class="view" id="view-persons">
+      <div class="search-bar">
+        <input class="search-input" id="personSearch" type="text" placeholder="输入姓名搜索..." />
+      </div>
+      <div id="personList"></div>
+      <div id="personDetail" style="display:none;"></div>
+    </section>
+
+    <!-- ===== 视图：备份设置 ===== -->
+    <section class="view" id="view-settings">
+      <div class="card">
+        <div class="card-title">数据备份与恢复</div>
+        <div class="setting-item" id="btnExportJson">
+          <div class="si-left">
+            <div class="si-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </div>
+            <div class="si-text">
+              <div class="t">导出 JSON 备份</div>
+              <div class="d">完整数据，可用于恢复</div>
+            </div>
+          </div>
+          <div class="si-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div class="setting-item" id="btnExportCsv">
+          <div class="si-left">
+            <div class="si-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            </div>
+            <div class="si-text">
+              <div class="t">导出 CSV 表格</div>
+              <div class="d">可用 Excel / WPS 打开</div>
+            </div>
+          </div>
+          <div class="si-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <div class="setting-item" id="btnImportJson">
+          <div class="si-left">
+            <div class="si-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div class="si-text">
+              <div class="t">导入 JSON 恢复</div>
+              <div class="d">从备份文件恢复数据</div>
+            </div>
+          </div>
+          <div class="si-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+        <input type="file" id="importFileInput" class="hidden-file" accept=".json" />
+      </div>
+
+      <div class="card">
+        <div class="card-title">关于</div>
+        <div class="stat-row">
+          <span class="k">存储方式</span>
+          <span class="v" style="font-size:13px;">浏览器 IndexedDB 本地存储</span>
+        </div>
+        <div class="stat-row">
+          <span class="k">数据安全</span>
+          <span class="v" style="font-size:13px;">仅存本机，不上传网络</span>
+        </div>
+        <div class="stat-row">
+          <span class="k">版本</span>
+          <span class="v" style="font-size:13px;">v1.0</span>
+        </div>
+      </div>
+
+      <div class="card setting-danger" style="border:1px solid var(--red-soft);">
+        <div class="setting-item" id="btnClearAll" style="box-shadow:none; margin-bottom:0; padding:0;">
+          <div class="si-left">
+            <div class="si-icon" style="background:var(--red-soft);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </div>
+            <div class="si-text">
+              <div class="t" style="color:var(--red-deep);">清空全部数据</div>
+              <div class="d">不可恢复，请先导出备份</div>
+            </div>
+          </div>
+          <div class="si-arrow" style="color:var(--red);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 底部Tab -->
+  <div class="tabbar">
+    <div class="tab-item active" data-view="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>首页</span>
+    </div>
+    <div class="tab-item" data-view="records">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      <span>记录</span>
+    </div>
+    <div class="tab-item" data-view="persons">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>人物</span>
+    </div>
+    <div class="tab-item" data-view="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <span>设置</span>
+    </div>
+  </div>
+</div>
+
+<!-- 悬浮新增按钮 -->
+<div class="fab" id="fabAdd">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+</div>
+
+<!-- ===== 抽屉：新增/编辑记录 ===== -->
+<div class="drawer-mask" id="formMask"></div>
+<div class="drawer" id="formDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <h2 id="formTitle">新增记录</h2>
+    <div class="drawer-close" id="formClose">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="form-group">
+      <label class="form-label">记录类型</label>
+      <div class="type-selector" id="typeSelector">
+        <div class="type-option active" data-type="giveGift">
+          <div class="t-name">随礼送出</div>
+          <div class="t-desc">我给别人随礼</div>
+        </div>
+        <div class="type-option" data-type="receiveGift">
+          <div class="t-name">随礼收到</div>
+          <div class="t-desc">别人给我随礼</div>
+        </div>
+        <div class="type-option" data-type="lend">
+          <div class="t-name">我借出</div>
+          <div class="t-desc">别人欠我钱</div>
+        </div>
+        <div class="type-option" data-type="borrow">
+          <div class="t-name">我借入</div>
+          <div class="t-desc">我欠别人钱</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">对方姓名</label>
+      <input class="form-input" id="formName" type="text" placeholder="请输入姓名" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">金额（元）</label>
+      <div class="amount-input-wrap">
+        <span class="prefix">¥</span>
+        <input id="formAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" />
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">日期</label>
+        <input class="form-input" id="formDate" type="date" />
+      </div>
+      <div class="form-group" id="formEventGroup">
+        <label class="form-label">事由标签</label>
+        <select class="form-select" id="formEvent">
+          <option value="">无</option>
+          <option value="婚礼">婚礼</option>
+          <option value="满月">满月/百天</option>
+          <option value="寿宴">寿宴</option>
+          <option value="乔迁">乔迁</option>
+          <option value="升学">升学</option>
+          <option value="生日">生日</option>
+          <option value="丧礼">丧礼</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group" id="formExpectGroup" style="display:none;">
+      <label class="form-label">约定还款日期（可选）</label>
+      <input class="form-input" id="formExpectDate" type="date" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">备注</label>
+      <textarea class="form-textarea" id="formRemark" placeholder="补充说明，如：结婚随礼、临时周转等"></textarea>
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary" id="formSubmit">保存记录</button>
+  </div>
+</div>
+
+<!-- ===== 抽屉：记录详情 ===== -->
+<div class="drawer-mask" id="detailMask"></div>
+<div class="drawer" id="detailDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <h2>记录详情</h2>
+    <div class="drawer-close" id="detailClose">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body" id="detailBody"></div>
+  <div class="drawer-footer" id="detailFooter"></div>
+</div>
+
+<!-- ===== 抽屉：还款 ===== -->
+<div class="drawer-mask" id="repayMask"></div>
+<div class="drawer" id="repayDrawer">
+  <div class="drawer-handle"></div>
+  <div class="drawer-header">
+    <h2>登记还款</h2>
+    <div class="drawer-close" id="repayClose">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <div class="card" style="background:var(--bg-soft); box-shadow:none;">
+      <div class="stat-row">
+        <span class="k">原始借款</span>
+        <span class="v" id="repayOriginal">¥0</span>
+      </div>
+      <div class="stat-row">
+        <span class="k">已还金额</span>
+        <span class="v" id="repayPaid" style="color:var(--green);">¥0</span>
+      </div>
+      <div class="stat-row">
+        <span class="k">剩余欠款</span>
+        <span class="v" id="repayRemain" style="color:var(--red);">¥0</span>
+      </div>
+    </div>
+    <div class="form-group" style="margin-top:16px;">
+      <label class="form-label">本次还款金额（元）</label>
+      <div class="amount-input-wrap">
+        <span class="prefix">¥</span>
+        <input id="repayAmount" type="number" inputmode="decimal" min="0" step="0.01" placeholder="0.00" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">还款日期</label>
+      <input class="form-input" id="repayDate" type="date" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">备注（可选）</label>
+      <input class="form-input" id="repayRemark" type="text" placeholder="如：微信转账、现金等" />
+    </div>
+  </div>
+  <div class="drawer-footer">
+    <button class="btn btn-primary" id="repaySubmit">确认还款</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- 确认弹窗 -->
+<div class="drawer-mask" id="confirmMask"></div>
+<div class="confirm-box" id="confirmBox">
+  <h3 id="confirmTitle">确认操作</h3>
+  <p id="confirmMsg">确定要执行此操作吗？</p>
+  <div class="btn-group">
+    <button class="btn btn-ghost" id="confirmCancel">取消</button>
+    <button class="btn btn-danger" id="confirmOk">确认</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ===== IndexedDB 封装 ===== */
+  const DB_NAME = 'GiftDebtDB';
+  const DB_VERSION = 1;
+  const STORE = 'records';
+
+  let db = null;
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function(e) {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains(STORE)) {
+          const store = d.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('name', 'name', { unique: false });
+          store.createIndex('type', 'type', { unique: false });
+          store.createIndex('date', 'date', { unique: false });
+        }
+      };
+      req.onsuccess = function(e) {
+        db = e.target.result;
+        resolve(db);
+      };
+      req.onerror = function(e) {
+        reject(e.target.error);
+      };
+    });
+  }
+
+  function dbAdd(record) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.add(record);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function dbPut(record) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.put(record);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function dbDelete(id) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function dbGetAll() {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readonly');
+      const store = tx.objectStore(STORE);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function dbClear() {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      const req = store.clear();
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function dbBulkAdd(records) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite');
+      const store = tx.objectStore(STORE);
+      records.forEach(r => {
+        delete r.id; // 让自增id重新分配
+        store.add(r);
+      });
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  /* ===== 工具函数 ===== */
+  const TYPE_META = {
+    giveGift: { label: '随礼送出', tag: 'give', direction: 'out' },
+    receiveGift: { label: '随礼收到', tag: 'receive', direction: 'in' },
+    lend: { label: '我借出', tag: 'lend', direction: 'out' },
+    borrow: { label: '我借入', tag: 'borrow', direction: 'in' }
+  };
+
+  function fmtMoney(n) {
+    const num = Number(n) || 0;
+    return '¥' + num.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function todayStr() {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  function genId() {
+    return 'r_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+  }
+
+  function getRemain(record) {
+    if (record.type !== 'lend' && record.type !== 'borrow') return 0;
+    const paid = (record.repayRecords || []).reduce((s, r) => s + (Number(r.repayAmount) || 0), 0);
+    return Math.max(0, (Number(record.amount) || 0) - paid);
+  }
+
+  function isSettled(record) {
+    if (record.type !== 'lend' && record.type !== 'borrow') return false;
+    return getRemain(record) <= 0;
+  }
+
+  function showToast(msg, duration) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), duration || 2000);
+  }
+
+  function showConfirm(title, msg, onOk) {
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmMsg').textContent = msg;
+    document.getElementById('confirmMask').classList.add('show');
+    document.getElementById('confirmBox').classList.add('show');
+    document.getElementById('confirmOk').onclick = function() {
+      hideConfirm();
+      onOk && onOk();
+    };
+  }
+
+  function hideConfirm() {
+    document.getElementById('confirmMask').classList.remove('show');
+    document.getElementById('confirmBox').classList.remove('show');
+  }
+
+  document.getElementById('confirmCancel').onclick = hideConfirm;
+  document.getElementById('confirmMask').onclick = hideConfirm;
+
+  /* ===== 应用状态 ===== */
+  const state = {
+    records: [],
+    currentView: 'home',
+    recordFilter: 'all',
+    recordKeyword: '',
+    personKeyword: '',
+    selectedPerson: null,
+    editingId: null,
+    currentDetailId: null,
+    currentRepayId: null,
+    formType: 'giveGift'
+  };
+
+  /* ===== 数据加载与刷新 ===== */
+  async function loadRecords() {
+    state.records = await dbGetAll();
+    state.records.sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return (b.id || 0) - (a.id || 0);
+    });
+  }
+
+  async function refreshAll() {
+    await loadRecords();
+    renderHome();
+    renderRecords();
+    renderPersons();
+  }
+
+  /* ===== 视图切换 ===== */
+  function switchView(view) {
+    state.currentView = view;
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.querySelectorAll('.tab-item').forEach(t => {
+      t.classList.toggle('active', t.dataset.view === view);
+    });
+    const titles = {
+      home: ['人情账本', '随礼往来 · 借款记录'],
+      records: ['全部记录', '所有往来流水'],
+      persons: ['人物查询', '按姓名查看往来'],
+      settings: ['设置', '备份与数据管理']
+    };
+    document.getElementById('topbarTitle').textContent = titles[view][0];
+    document.getElementById('topbarSub').textContent = titles[view][1];
+    document.querySelector('.main').scrollTop = 0;
+  }
+
+  document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', () => switchView(tab.dataset.view));
+  });
+
+  /* ===== 首页统计渲染 ===== */
+  function renderHome() {
+    let giveOut = 0, giveIn = 0, lendOut = 0, borrowIn = 0;
+    let unsettled = 0;
+    const debtList = [];
+
+    state.records.forEach(r => {
+      const amt = Number(r.amount) || 0;
+      if (r.type === 'giveGift') giveOut += amt;
+      else if (r.type === 'receiveGift') giveIn += amt;
+      else if (r.type === 'lend') {
+        const remain = getRemain(r);
+        lendOut += remain;
+        if (remain > 0) {
+          unsettled++;
+          debtList.push({ ...r, remain, direction: 'lend' });
+        }
+      } else if (r.type === 'borrow') {
+        const remain = getRemain(r);
+        borrowIn += remain;
+        if (remain > 0) {
+          unsettled++;
+          debtList.push({ ...r, remain, direction: 'borrow' });
+        }
+      }
+    });
+
+    document.getElementById('statGiveOut').textContent = fmtMoney(giveOut);
+    document.getElementById('statGiveIn').textContent = fmtMoney(giveIn);
+    document.getElementById('statLendOut').textContent = fmtMoney(lendOut);
+    document.getElementById('statBorrowIn').textContent = fmtMoney(borrowIn);
+    document.getElementById('statGiftBalance').textContent = fmtMoney(giveIn - giveOut);
+    document.getElementById('statUnsettledCount').textContent = unsettled + ' 笔';
+    document.getElementById('statTotalCount').textContent = state.records.length + ' 条';
+
+    // 逾期提醒（优先）
+    const overdueList = debtList.filter(r => r.expectRepayDate && r.expectRepayDate < todayStr());
+    const overdueCard = document.getElementById('homeOverdueCard');
+    const overdueBox = document.getElementById('homeOverdueList');
+    if (overdueList.length > 0) {
+      overdueCard.style.display = '';
+      overdueList.sort((a, b) => a.expectRepayDate.localeCompare(b.expectRepayDate));
+      overdueBox.innerHTML = overdueList.map(r => {
+        const days = Math.floor((new Date(todayStr()) - new Date(r.expectRepayDate)) / 86400000);
+        return '<div class="stat-row" style="border-color:var(--red-soft);">' +
+          '<span class="k"><span style="color:var(--red-deep);font-weight:600;">⚠ </span>' + escapeHtml(r.name) + '<span style="color:var(--red);margin-left:4px;">逾期' + days + '天</span></span>' +
+          '<span class="v" style="color:var(--red-deep);font-weight:700;">' + (r.direction === 'lend' ? '欠我 ' : '我欠 ') + fmtMoney(r.remain) + '</span>' +
+        '</div>';
+      }).join('');
+    } else {
+      overdueCard.style.display = 'none';
+    }
+
+    // 待关注借款
+    const card = document.getElementById('homeDebtCard');
+    const list = document.getElementById('homeDebtList');
+    if (debtList.length > 0) {
+      card.style.display = '';
+      debtList.sort((a, b) => b.remain - a.remain);
+      list.innerHTML = debtList.slice(0, 5).map(r => {
+        const isOverdue = r.expectRepayDate && r.expectRepayDate < todayStr();
+        return '<div class="stat-row">' +
+          '<span class="k">' + escapeHtml(r.name) + (r.expectRepayDate ? '（' + r.expectRepayDate + '）' : '') + '</span>' +
+          '<span class="v" style="color:' + (isOverdue ? 'var(--red)' : (r.direction === 'lend' ? 'var(--blue)' : 'var(--amber)')) + ';">' +
+          (r.direction === 'lend' ? '欠我 ' : '我欠 ') + fmtMoney(r.remain) + '</span>' +
+        '</div>';
+      }).join('');
+    } else {
+      card.style.display = 'none';
+    }
+
+    // 本月动态
+    const now = new Date();
+    const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+    let mGiveOut = 0, mGiveIn = 0, mLendOut = 0, mBorrowIn = 0, mCount = 0;
+    state.records.forEach(r => {
+      if ((r.date || '').startsWith(thisMonth)) {
+        const amt = Number(r.amount) || 0;
+        mCount++;
+        if (r.type === 'giveGift') mGiveOut += amt;
+        else if (r.type === 'receiveGift') mGiveIn += amt;
+        else if (r.type === 'lend') mLendOut += amt;
+        else if (r.type === 'borrow') mBorrowIn += amt;
+      }
+    });
+    const monthBox = document.getElementById('homeMonthStats');
+    if (mCount > 0) {
+      monthBox.innerHTML =
+        '<div class="stat-row"><span class="k">本月随礼送出</span><span class="v" style="color:var(--red);">' + fmtMoney(mGiveOut) + '</span></div>' +
+        '<div class="stat-row"><span class="k">本月随礼收到</span><span class="v" style="color:var(--green);">' + fmtMoney(mGiveIn) + '</span></div>' +
+        '<div class="stat-row"><span class="k">本月借款借出</span><span class="v" style="color:var(--blue);">' + fmtMoney(mLendOut) + '</span></div>' +
+        '<div class="stat-row"><span class="k">本月借款借入</span><span class="v" style="color:var(--amber);">' + fmtMoney(mBorrowIn) + '</span></div>' +
+        '<div class="stat-row"><span class="k">本月共 ' + mCount + ' 笔</span><span class="v">差额 ' + fmtMoney(mGiveIn - mGiveOut) + '</span></div>';
+    } else {
+      monthBox.innerHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:8px;">本月暂无记录</div>';
+    }
+
+    // 事件分布
+    const eventMap = {};
+    let giftTotal = 0;
+    state.records.forEach(r => {
+      if (r.type === 'giveGift' || r.type === 'receiveGift') {
+        const tag = r.eventTag || '未分类';
+        if (!eventMap[tag]) eventMap[tag] = { count: 0, amount: 0 };
+        eventMap[tag].count++;
+        eventMap[tag].amount += Number(r.amount) || 0;
+        giftTotal += Number(r.amount) || 0;
+      }
+    });
+    const eventBox = document.getElementById('homeEventStats');
+    const events = Object.entries(eventMap).sort((a, b) => b[1].amount - a[1].amount);
+    if (events.length > 0) {
+      eventBox.innerHTML = events.map(([tag, info]) => {
+        const pct = giftTotal > 0 ? Math.round(info.amount / giftTotal * 100) : 0;
+        return '<div style="margin-bottom:10px;">' +
+          '<div class="stat-row" style="border:none;padding:0 0 4px;"><span class="k">' + escapeHtml(tag) + '</span><span class="v">' + info.count + ' 笔 · ' + fmtMoney(info.amount) + '</span></div>' +
+          '<div style="background:var(--bg-soft);border-radius:4px;height:6px;overflow:hidden;">' +
+            '<div style="background:var(--red);height:100%;width:' + pct + '%;border-radius:4px;"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    } else {
+      eventBox.innerHTML = '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:8px;">暂无随礼记录</div>';
+    }
+  }
+
+  /* ===== 记录列表渲染 ===== */
+  function renderRecords() {
+    const list = document.getElementById('recordList');
+    let filtered = state.records;
+
+    // 筛选
+    if (state.recordFilter === 'unsettled') {
+      filtered = filtered.filter(r => (r.type === 'lend' || r.type === 'borrow') && !isSettled(r));
+    } else if (state.recordFilter !== 'all') {
+      filtered = filtered.filter(r => r.type === state.recordFilter);
+    }
+
+    // 搜索
+    if (state.recordKeyword) {
+      const kw = state.recordKeyword.toLowerCase();
+      filtered = filtered.filter(r =>
+        (r.name || '').toLowerCase().includes(kw) ||
+        (r.remark || '').toLowerCase().includes(kw)
+      );
+    }
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<div class="empty">' +
+        '<svg class="e-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+        '<div class="e-title">暂无记录</div>' +
+        '<div class="e-desc">点击右下角 + 号添加第一条记录</div>' +
+      '</div>';
+      return;
+    }
+
+    list.innerHTML = filtered.map(r => recordCardHtml(r)).join('');
+
+    // 绑定点击
+    list.querySelectorAll('.record-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = Number(card.dataset.id);
+        openDetail(id);
+      });
+    });
+  }
+
+  function recordCardHtml(r) {
+    const meta = TYPE_META[r.type] || TYPE_META.giveGift;
+    const isDebt = r.type === 'lend' || r.type === 'borrow';
+    const remain = isDebt ? getRemain(r) : 0;
+    const settled = isDebt && isSettled(r);
+
+    let html = '<div class="record-card" data-id="' + r.id + '">';
+    html += '<div class="rc-top">';
+    html += '<span class="rc-name">' + escapeHtml(r.name) + '</span>';
+    html += '<span class="rc-amount ' + meta.direction + '">' + (meta.direction === 'out' ? '-' : '+') + fmtMoney(r.amount) + '</span>';
+    html += '</div>';
+    html += '<div class="rc-meta">';
+    html += '<span class="tag ' + (settled ? 'settled' : meta.tag) + '">' + (settled ? '已结清' : meta.label) + '</span>';
+    html += '<span>' + r.date + '</span>';
+    if (r.eventTag) html += '<span>· ' + escapeHtml(r.eventTag) + '</span>';
+    html += '</div>';
+    if (r.remark) html += '<div class="rc-remark">' + escapeHtml(r.remark) + '</div>';
+    if (isDebt) {
+      html += '<div class="rc-debt">';
+      html += '<span>已还 ' + fmtMoney((Number(r.amount)||0) - remain) + '</span>';
+      html += '<span class="remain ' + (remain > 0 ? 'warn' : '') + '">剩余 ' + fmtMoney(remain) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  // 筛选chip
+  document.getElementById('recordFilters').addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    document.querySelectorAll('#recordFilters .chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.recordFilter = chip.dataset.filter;
+    renderRecords();
+  });
+
+  // 搜索
+  document.getElementById('recordSearch').addEventListener('input', (e) => {
+    state.recordKeyword = e.target.value.trim();
+    renderRecords();
+  });
+
+  /* ===== 人物查询渲染 ===== */
+  function renderPersons() {
+    const listEl = document.getElementById('personList');
+    const detailEl = document.getElementById('personDetail');
+
+    // 如果选中了某个人，显示详情
+    if (state.selectedPerson) {
+      listEl.style.display = 'none';
+      detailEl.style.display = '';
+      renderPersonDetail();
+      return;
+    }
+
+    listEl.style.display = '';
+    detailEl.style.display = 'none';
+
+    // 按人聚合
+    const personMap = {};
+    state.records.forEach(r => {
+      if (!personMap[r.name]) {
+        personMap[r.name] = { name: r.name, giveOut: 0, giveIn: 0, lendRemain: 0, borrowRemain: 0, count: 0 };
+      }
+      const p = personMap[r.name];
+      p.count++;
+      const amt = Number(r.amount) || 0;
+      if (r.type === 'giveGift') p.giveOut += amt;
+      else if (r.type === 'receiveGift') p.giveIn += amt;
+      else if (r.type === 'lend') p.lendRemain += getRemain(r);
+      else if (r.type === 'borrow') p.borrowRemain += getRemain(r);
+    });
+
+    let persons = Object.values(personMap);
+    if (state.personKeyword) {
+      const kw = state.personKeyword.toLowerCase();
+      persons = persons.filter(p => p.name.toLowerCase().includes(kw));
+    }
+
+    if (persons.length === 0) {
+      listEl.innerHTML = '<div class="empty">' +
+        '<svg class="e-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' +
+        '<div class="e-title">未找到相关人物</div>' +
+        '<div class="e-desc">换个关键词试试</div>' +
+      '</div>';
+      return;
+    }
+
+    listEl.innerHTML = persons.map(p => {
+      let info = '共 ' + p.count + ' 条记录';
+      const debts = [];
+      if (p.lendRemain > 0) debts.push('欠我' + fmtMoney(p.lendRemain));
+      if (p.borrowRemain > 0) debts.push('我欠' + fmtMoney(p.borrowRemain));
+      if (debts.length) info += ' · ' + debts.join(' · ');
+      return '<div class="person-list-item" data-name="' + escapeHtml(p.name) + '">' +
+        '<div>' +
+          '<div class="pli-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="pli-info">' + info + '</div>' +
+        '</div>' +
+        '<div class="pli-arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></div>' +
+      '</div>';
+    }).join('');
+
+    listEl.querySelectorAll('.person-list-item').forEach(item => {
+      item.addEventListener('click', () => {
+        state.selectedPerson = item.dataset.name;
+        renderPersons();
+      });
+    });
+  }
+
+  function renderPersonDetail() {
+    const name = state.selectedPerson;
+    const records = state.records.filter(r => r.name === name);
+
+    let giveOut = 0, giveIn = 0, lendRemain = 0, borrowRemain = 0;
+    records.forEach(r => {
+      const amt = Number(r.amount) || 0;
+      if (r.type === 'giveGift') giveOut += amt;
+      else if (r.type === 'receiveGift') giveIn += amt;
+      else if (r.type === 'lend') lendRemain += getRemain(r);
+      else if (r.type === 'borrow') borrowRemain += getRemain(r);
+    });
+
+    let html = '<div class="person-summary">' +
+      '<div class="ps-name">' + escapeHtml(name) + '</div>' +
+      '<div class="ps-grid">' +
+        '<div class="ps-item"><div class="lbl">我随给他</div><div class="val">' + fmtMoney(giveOut) + '</div></div>' +
+        '<div class="ps-item"><div class="lbl">他随给我</div><div class="val">' + fmtMoney(giveIn) + '</div></div>' +
+        '<div class="ps-item"><div class="lbl">他欠我</div><div class="val">' + fmtMoney(lendRemain) + '</div></div>' +
+        '<div class="ps-item"><div class="lbl">我欠他</div><div class="val">' + fmtMoney(borrowRemain) + '</div></div>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div style="margin-bottom:12px;"><button class="btn btn-ghost btn-sm" id="backPersonList">' +
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> 返回人物列表' +
+    '</button></div>';
+
+    html += '<div class="card-title" style="margin-bottom:8px;">全部往来（' + records.length + ' 条）</div>';
+    html += records.map(r => recordCardHtml(r)).join('');
+
+    document.getElementById('personDetail').innerHTML = html;
+    document.getElementById('backPersonList').addEventListener('click', () => {
+      state.selectedPerson = null;
+      renderPersons();
+    });
+    document.querySelectorAll('#personDetail .record-card').forEach(card => {
+      card.addEventListener('click', () => openDetail(Number(card.dataset.id)));
+    });
+  }
+
+  document.getElementById('personSearch').addEventListener('input', (e) => {
+    state.personKeyword = e.target.value.trim();
+    state.selectedPerson = null;
+    renderPersons();
+  });
+
+  /* ===== 新增/编辑表单 ===== */
+  function openForm(editId) {
+    state.editingId = editId || null;
+    state.formType = 'giveGift';
+
+    document.getElementById('formTitle').textContent = editId ? '编辑记录' : '新增记录';
+    document.getElementById('formSubmit').textContent = editId ? '保存修改' : '保存记录';
+
+    // 重置表单
+    document.getElementById('formName').value = '';
+    document.getElementById('formAmount').value = '';
+    document.getElementById('formDate').value = todayStr();
+    document.getElementById('formEvent').value = '';
+    document.getElementById('formExpectDate').value = '';
+    document.getElementById('formRemark').value = '';
+
+    // 如果是编辑，填充数据
+    if (editId) {
+      const r = state.records.find(x => x.id === editId);
+      if (r) {
+        state.formType = r.type;
+        document.getElementById('formName').value = r.name || '';
+        document.getElementById('formAmount').value = r.amount || '';
+        document.getElementById('formDate').value = r.date || todayStr();
+        document.getElementById('formEvent').value = r.eventTag || '';
+        document.getElementById('formExpectDate').value = r.expectRepayDate || '';
+        document.getElementById('formRemark').value = r.remark || '';
+        // 借款编辑时禁用金额修改
+        if (r.type === 'lend' || r.type === 'borrow') {
+          document.getElementById('formAmount').disabled = true;
+          document.getElementById('formAmount').style.opacity = '0.5';
+        } else {
+          document.getElementById('formAmount').disabled = false;
+          document.getElementById('formAmount').style.opacity = '1';
+        }
+      }
+    } else {
+      document.getElementById('formAmount').disabled = false;
+      document.getElementById('formAmount').style.opacity = '1';
+    }
+
+    updateTypeSelector();
+    toggleFormFields();
+    showDrawer('form');
+  }
+
+  function updateTypeSelector() {
+    document.querySelectorAll('#typeSelector .type-option').forEach(opt => {
+      opt.classList.toggle('active', opt.dataset.type === state.formType);
+    });
+  }
+
+  function toggleFormFields() {
+    const isDebt = state.formType === 'lend' || state.formType === 'borrow';
+    document.getElementById('formEventGroup').style.display = isDebt ? 'none' : '';
+    document.getElementById('formExpectGroup').style.display = isDebt ? '' : 'none';
+  }
+
+  document.querySelectorAll('#typeSelector .type-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      // 编辑借款记录时不允许改类型
+      if (state.editingId) {
+        const r = state.records.find(x => x.id === state.editingId);
+        if (r && (r.type === 'lend' || r.type === 'borrow')) {
+          showToast('借款记录类型不可修改');
+          return;
+        }
+      }
+      state.formType = opt.dataset.type;
+      updateTypeSelector();
+      toggleFormFields();
+    });
+  });
+
+  document.getElementById('formSubmit').addEventListener('click', async () => {
+    const name = document.getElementById('formName').value.trim();
+    const amount = parseFloat(document.getElementById('formAmount').value);
+    const date = document.getElementById('formDate').value;
+    const eventTag = document.getElementById('formEvent').value;
+    const expectRepayDate = document.getElementById('formExpectDate').value;
+    const remark = document.getElementById('formRemark').value.trim();
+
+    if (!name) { showToast('请输入对方姓名'); return; }
+    if (isNaN(amount) || amount <= 0) { showToast('请输入有效金额'); return; }
+    if (!date) { showToast('请选择日期'); return; }
+
+    const isDebt = state.formType === 'lend' || state.formType === 'borrow';
+
+    if (state.editingId) {
+      const r = state.records.find(x => x.id === state.editingId);
+      if (r) {
+        r.name = name;
+        r.date = date;
+        r.remark = remark;
+        // 借款本金不可修改
+        if (!(r.type === 'lend' || r.type === 'borrow')) {
+          r.amount = amount;
+          r.type = state.formType;
+          r.eventTag = eventTag;
+        } else {
+          r.expectRepayDate = expectRepayDate;
+        }
+        await dbPut(r);
+        showToast('修改成功');
+      }
+    } else {
+      const record = {
+        name: name,
+        type: state.formType,
+        amount: amount,
+        date: date,
+        remark: remark,
+        createdAt: Date.now()
+      };
+      if (isDebt) {
+        record.repayRecords = [];
+        record.expectRepayDate = expectRepayDate || '';
+      } else {
+        record.eventTag = eventTag || '';
+      }
+      await dbAdd(record);
+      showToast('添加成功');
+    }
+
+    hideDrawer('form');
+    await refreshAll();
+  });
+
+  document.getElementById('formClose').addEventListener('click', () => hideDrawer('form'));
+  document.getElementById('formMask').addEventListener('click', () => hideDrawer('form'));
+
+  /* ===== 详情抽屉 ===== */
+  function openDetail(id) {
+    const r = state.records.find(x => x.id === id);
+    if (!r) return;
+    state.currentDetailId = id;
+
+    const meta = TYPE_META[r.type];
+    const isDebt = r.type === 'lend' || r.type === 'borrow';
+    const remain = isDebt ? getRemain(r) : 0;
+    const settled = isDebt && isSettled(r);
+
+    let html = '<div class="detail-section">';
+    html += '<div class="detail-row"><span class="k">类型</span><span class="v"><span class="tag ' + (settled ? 'settled' : meta.tag) + '">' + (settled ? '已结清' : meta.label) + '</span></span></div>';
+    html += '<div class="detail-row"><span class="k">对方姓名</span><span class="v">' + escapeHtml(r.name) + '</span></div>';
+    html += '<div class="detail-row"><span class="k">金额</span><span class="v" style="font-size:18px;font-weight:700;color:' + (meta.direction === 'out' ? 'var(--red)' : 'var(--green)') + ';">' + (meta.direction === 'out' ? '-' : '+') + fmtMoney(r.amount) + '</span></div>';
+    html += '<div class="detail-row"><span class="k">日期</span><span class="v">' + r.date + '</span></div>';
+    if (r.eventTag) html += '<div class="detail-row"><span class="k">事由</span><span class="v">' + escapeHtml(r.eventTag) + '</span></div>';
+    if (isDebt && r.expectRepayDate) html += '<div class="detail-row"><span class="k">约定还款日</span><span class="v">' + r.expectRepayDate + '</span></div>';
+    if (r.remark) html += '<div class="detail-row"><span class="k">备注</span><span class="v">' + escapeHtml(r.remark) + '</span></div>';
+    html += '</div>';
+
+    if (isDebt) {
+      html += '<div class="detail-section">';
+      html += '<h3>还款情况</h3>';
+      html += '<div class="card" style="background:var(--bg-soft);box-shadow:none;margin-bottom:10px;">';
+      html += '<div class="stat-row"><span class="k">原始借款</span><span class="v">' + fmtMoney(r.amount) + '</span></div>';
+      html += '<div class="stat-row"><span class="k">已还金额</span><span class="v" style="color:var(--green);">' + fmtMoney((Number(r.amount)||0) - remain) + '</span></div>';
+      html += '<div class="stat-row"><span class="k">剩余欠款</span><span class="v" style="color:' + (remain > 0 ? 'var(--red)' : 'var(--green)') + ';font-weight:700;">' + fmtMoney(remain) + '</span></div>';
+      html += '</div>';
+
+      const repayList = r.repayRecords || [];
+      if (repayList.length > 0) {
+        html += '<h3 style="margin-top:12px;">还款记录（' + repayList.length + ' 笔）</h3>';
+        html += repayList.map(rp => '<div class="repay-item">' +
+          '<div class="ri-top"><span>' + rp.repayDate + '</span><span class="ri-amount">+' + fmtMoney(rp.repayAmount) + '</span></div>' +
+          (rp.repayRemark ? '<div style="color:var(--ink-faint);font-size:12px;">' + escapeHtml(rp.repayRemark) + '</div>' : '') +
+        '</div>').join('');
+      } else {
+        html += '<div style="text-align:center;color:var(--ink-faint);font-size:13px;padding:12px;">暂无还款记录</div>';
+      }
+      html += '</div>';
+    }
+
+    document.getElementById('detailBody').innerHTML = html;
+
+    // 底部按钮
+    let footerHtml = '<div class="btn-group">';
+    footerHtml += '<button class="btn btn-ghost" id="detailEdit">编辑</button>';
+    if (isDebt && !settled) {
+      footerHtml += '<button class="btn btn-primary" id="detailRepay">登记还款</button>';
+    }
+    footerHtml += '</div>';
+    footerHtml += '<button class="btn btn-danger btn-block" style="margin-top:10px;" id="detailDelete">删除此记录</button>';
+    document.getElementById('detailFooter').innerHTML = footerHtml;
+
+    document.getElementById('detailEdit').addEventListener('click', () => {
+      hideDrawer('detail');
+      setTimeout(() => openForm(id), 300);
+    });
+
+    const repayBtn = document.getElementById('detailRepay');
+    if (repayBtn) {
+      repayBtn.addEventListener('click', () => {
+        hideDrawer('detail');
+        setTimeout(() => openRepay(id), 300);
+      });
+    }
+
+    document.getElementById('detailDelete').addEventListener('click', () => {
+      showConfirm('删除记录', '确定要删除这条记录吗？删除后不可恢复。', async () => {
+        await dbDelete(id);
+        hideDrawer('detail');
+        showToast('已删除');
+        await refreshAll();
+      });
+    });
+
+    showDrawer('detail');
+  }
+
+  document.getElementById('detailClose').addEventListener('click', () => hideDrawer('detail'));
+  document.getElementById('detailMask').addEventListener('click', () => hideDrawer('detail'));
+
+  /* ===== 还款抽屉 ===== */
+  function openRepay(id) {
+    const r = state.records.find(x => x.id === id);
+    if (!r) return;
+    state.currentRepayId = id;
+
+    const remain = getRemain(r);
+    document.getElementById('repayOriginal').textContent = fmtMoney(r.amount);
+    document.getElementById('repayPaid').textContent = fmtMoney((Number(r.amount)||0) - remain);
+    document.getElementById('repayRemain').textContent = fmtMoney(remain);
+    document.getElementById('repayAmount').value = '';
+    document.getElementById('repayDate').value = todayStr();
+    document.getElementById('repayRemark').value = '';
+
+    showDrawer('repay');
+  }
+
+  document.getElementById('repaySubmit').addEventListener('click', async () => {
+    const id = state.currentRepayId;
+    const r = state.records.find(x => x.id === id);
+    if (!r) return;
+
+    const amount = parseFloat(document.getElementById('repayAmount').value);
+    const date = document.getElementById('repayDate').value;
+    const remark = document.getElementById('repayRemark').value.trim();
+
+    if (isNaN(amount) || amount <= 0) { showToast('请输入有效还款金额'); return; }
+    if (!date) { showToast('请选择还款日期'); return; }
+
+    const remain = getRemain(r);
+    if (amount > remain + 0.001) {
+      showToast('还款金额不能超过剩余欠款 ' + fmtMoney(remain));
+      return;
+    }
+
+    if (!r.repayRecords) r.repayRecords = [];
+    r.repayRecords.push({
+      repayId: genId(),
+      repayDate: date,
+      repayAmount: amount,
+      repayRemark: remark
+    });
+
+    await dbPut(r);
+    hideDrawer('repay');
+    showToast('还款登记成功');
+    await refreshAll();
+  });
+
+  document.getElementById('repayClose').addEventListener('click', () => hideDrawer('repay'));
+  document.getElementById('repayMask').addEventListener('click', () => hideDrawer('repay'));
+
+  /* ===== 抽屉通用控制 ===== */
+  function showDrawer(name) {
+    document.getElementById(name + 'Mask').classList.add('show');
+    document.getElementById(name + 'Drawer').classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function hideDrawer(name) {
+    document.getElementById(name + 'Mask').classList.remove('show');
+    document.getElementById(name + 'Drawer').classList.remove('show');
+    document.body.style.overflow = '';
+  }
+
+  /* ===== 悬浮按钮 ===== */
+  document.getElementById('fabAdd').addEventListener('click', () => openForm(null));
+  document.getElementById('topbarAdd').addEventListener('click', () => openForm(null));
+
+  /* ===== 设置页：导出导入 ===== */
+  document.getElementById('btnExportJson').addEventListener('click', async () => {
+    const data = await dbGetAll();
+    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), records: data }, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, '人情账本备份_' + todayStr() + '.json');
+    localStorage.setItem('lastBackupAt', String(Date.now()));
+    showToast('已导出 JSON 备份');
+  });
+
+  document.getElementById('btnExportCsv').addEventListener('click', async () => {
+    const data = await dbGetAll();
+    const headers = ['ID', '日期', '姓名', '类型', '金额', '事由标签', '约定还款日', '备注', '已还金额', '剩余欠款', '还款记录'];
+    const rows = data.map(r => {
+      const isDebt = r.type === 'lend' || r.type === 'borrow';
+      const remain = isDebt ? getRemain(r) : '';
+      const paid = isDebt ? (Number(r.amount)||0) - remain : '';
+      const repayStr = isDebt ? (r.repayRecords || []).map(rp => rp.repayDate + ':' + rp.repayAmount + (rp.repayRemark ? '(' + rp.repayRemark + ')' : '')).join('; ') : '';
+      return [
+        r.id, r.date, r.name, TYPE_META[r.type].label, r.amount,
+        r.eventTag || '', r.expectRepayDate || '', (r.remark || '').replace(/,/g, '，'),
+        paid, remain, repayStr.replace(/,/g, '，')
+      ];
+    });
+    const csv = '\uFEFF' + [headers, ...rows].map(row => row.map(c => '"' + String(c).replace(/"/g, '""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    downloadBlob(blob, '人情账本_' + todayStr() + '.csv');
+    showToast('已导出 CSV 表格');
+  });
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  document.getElementById('btnImportJson').addEventListener('click', () => {
+    document.getElementById('importFileInput').click();
+  });
+
+  document.getElementById('importFileInput').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const records = data.records || data;
+      if (!Array.isArray(records)) throw new Error('格式错误');
+
+      showConfirm('导入数据', '将导入 ' + records.length + ' 条记录。是否覆盖现有数据？\n点"确认"覆盖，点"取消"追加。', async () => {
+        // 覆盖模式
+        await dbClear();
+        await dbBulkAdd(records);
+        e.target.value = '';
+        showToast('已覆盖导入 ' + records.length + ' 条记录');
+        await refreshAll();
+      });
+      // 追加模式：用户点取消时执行
+      const cancelBtn = document.getElementById('confirmCancel');
+      const originalOnclick = cancelBtn.onclick;
+      cancelBtn.onclick = async function() {
+        cancelBtn.onclick = originalOnclick;
+        hideConfirm();
+        await dbBulkAdd(records);
+        e.target.value = '';
+        showToast('已追加导入 ' + records.length + ' 条记录');
+        await refreshAll();
+      };
+    } catch (err) {
+      showToast('导入失败：文件格式不正确');
+      e.target.value = '';
+    }
+  });
+
+  document.getElementById('btnClearAll').addEventListener('click', () => {
+    showConfirm('清空全部数据', '此操作将删除所有记录，且不可恢复。建议先导出备份。确定清空吗？', async () => {
+      await dbClear();
+      showToast('已清空全部数据');
+      await refreshAll();
+    });
+  });
+
+  /* ===== 初始化 ===== */
+  async function init() {
+    try {
+      await openDB();
+      await refreshAll();
+      checkBackupStatus();
+    } catch (err) {
+      showToast('数据库初始化失败：' + err.message);
+      console.error(err);
+    }
+  }
+
+  function checkBackupStatus() {
+    if (state.records.length === 0) return;
+    const last = localStorage.getItem('lastBackupAt');
+    const now = Date.now();
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    let needWarn = false;
+    let msg = '';
+
+    if (!last) {
+      needWarn = true;
+      msg = '检测到 ' + state.records.length + ' 条记录从未备份过。建议立即导出 JSON 备份以防数据丢失。';
+    } else if (now - Number(last) > sevenDays) {
+      needWarn = true;
+      const days = Math.floor((now - Number(last)) / sevenDays) * 7;
+      msg = '距上次备份已超过 ' + days + ' 天，期间有 ' + state.records.length + ' 条记录。建议导出最新备份。';
+    }
+
+    if (needWarn) {
+      setTimeout(() => {
+        document.getElementById('confirmTitle').textContent = '备份提醒';
+        document.getElementById('confirmMsg').textContent = msg;
+        document.getElementById('confirmMask').classList.add('show');
+        document.getElementById('confirmBox').classList.add('show');
+        document.getElementById('confirmOk').textContent = '立即备份';
+        document.getElementById('confirmOk').onclick = function() {
+          hideConfirm();
+          switchView('settings');
+        };
+        document.getElementById('confirmCancel').textContent = '稍后再说';
+      }, 500);
+    }
+  }
+
+  init();
+
+  // PWA：注册 Service Worker（失败不影响使用）
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./sw.js').catch(function() {});
+    });
+  }
+})();
+</script>
+</body>
+</html>

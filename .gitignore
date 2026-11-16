@@ -1,0 +1,20 @@
+# Build
+android/.gradle/
+android/build/
+android/app/build/
+
+# Gradle wrapper jars (Actions 动态下载)
+android/gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# OS
+Thumbs.db
+
+# Local storage
+*.log
+*.tmp
