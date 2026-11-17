@@ -18,3 +18,7 @@ Thumbs.db
 # Local storage
 *.log
 *.tmp
+
+# Backup & local workspace data
+*.bak
+.workbuddy/
